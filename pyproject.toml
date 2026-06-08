@@ -4,13 +4,24 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robinhood-agent"
-version = "0.1.0"
-description = "An autonomous Robinhood trading agent built on the Claude Agent SDK and Robinhood's official Agentic Trading MCP server."
+version = "0.2.0"
+description = "Robinhood trading: a deterministic multi-factor technical-analysis engine plus an LLM agent, on the Claude Agent SDK and Robinhood's official Agentic Trading MCP server."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "claude-agent-sdk>=0.1.0",
+    "numpy>=1.24",
     "python-dotenv>=1.0.0",
+    "claude-agent-sdk>=0.1.0",
+]
+
+[project.optional-dependencies]
+# Needed only for the TA engine's live mode (`trade --execute`).
+live = [
+    "yfinance>=0.2.40",
+    "mcp>=1.0.0",
+]
+dev = [
+    "pytest>=7.0",
 ]
 
 [project.scripts]
@@ -18,3 +29,6 @@ robinhood-agent = "robinhood_agent.__main__:main"
 
 [tool.setuptools]
 packages = ["robinhood_agent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

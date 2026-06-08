@@ -1,2 +1,8 @@
-claude-agent-sdk>=0.1.0
+# Core (deterministic TA engine + agent)
+numpy>=1.24
 python-dotenv>=1.0.0
+claude-agent-sdk>=0.1.0
+
+# Live market data + direct MCP execution (TA engine `--execute`)
+yfinance>=0.2.40
+mcp>=1.0.0
