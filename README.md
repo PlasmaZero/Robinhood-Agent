@@ -94,14 +94,16 @@ SPY     · HOLD     28%      96.35  -0.11    88%  100%
 
 ### Does it actually make money?
 
-**Tested honestly: no — not as configured.** On a bias-free 46-symbol slice of the
-S&P 500 (2013–2018, out-of-sample, 976 trades), the strategy returns a thin
-per-trade edge (profit factor **1.07**) that vanishes at the portfolio level. It
-**badly underperforms buy-and-hold** (mean +1.9% vs +78%; it beat B&H on only 15%
-of symbols) because it sits ~81% in cash and the sample is a pure bull market. Its
-only edge is lower drawdown — but that's just low exposure, and its Sharpe is ≈ 0.
+**Tested honestly: no — not as configured.** On a bias-free 168-symbol slice of the
+S&P 500 (2013–2018, out-of-sample, **3,423 trades**), the strategy has a thin
+per-trade edge (profit factor **1.11**, expectancy +0.18%/trade) that vanishes at
+the portfolio level. It **badly underperforms buy-and-hold** (mean +2.8% vs +69%;
+it beat B&H on only 16% of symbols) because it sits ~81% in cash and the sample is
+a pure bull market. Its only edge is lower drawdown — but that's just low exposure,
+and its Sharpe is ≈ 0. A trailing-stop variant ("let winners run") was tested and
+made it **worse**, not better.
 
-The **code** is correct (bias-free, 45 passing tests incl. a no-lookahead guard);
+The **code** is correct (bias-free, 47 passing tests incl. a no-lookahead guard);
 the **strategy** does not have a tradeable edge on this data. See
 [`BACKTEST.md`](BACKTEST.md) for the full numbers, caveats, and how to reproduce:
 
