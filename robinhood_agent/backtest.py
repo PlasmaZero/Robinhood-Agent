@@ -88,6 +88,8 @@ def run_backtest(
     commission_per_trade: float = 0.0,
     size_floor_frac: float = 0.5,
     max_position_frac: float = 0.95,
+    exit_mode: str = "target",  # "target" (fixed 2:1) or "trailing" (let winners run)
+    trail_atr_mult: float = 3.0,
 ) -> BacktestResult:
     sp = params or StrategyParams()
     o, h, l, c = bars.open, bars.high, bars.low, bars.close
@@ -102,6 +104,8 @@ def run_backtest(
     entry_price = 0.0
     entry_index = 0
     stop = target = 0.0
+    atr_entry = 0.0
+    highest = 0.0  # high-water mark since entry, for the trailing stop
     pending: tuple[str, object] | None = None  # ('buy'|'sell', Decision)
 
     trades: list[Trade] = []
@@ -124,24 +128,36 @@ def run_backtest(
                     cash -= qty * fill + commission_per_trade
                     stop = dec.stop_price if dec.stop_price else fill * 0.95  # type: ignore[attr-defined]
                     target = dec.target_price if dec.target_price else fill * 1.10  # type: ignore[attr-defined]
+                    atr_entry = dec.atr if (dec.atr and dec.atr > 0) else fill * 0.02  # type: ignore[attr-defined]
+                    highest = fill
             elif side == "sell" and qty > 0:
                 fill = o[t] * (1.0 - slip)
                 _close(trades, symbol, entry_index, entry_price, t, fill, qty, "signal", commission_per_trade)
                 cash += qty * fill - commission_per_trade
                 qty = 0.0
 
-        # 2) While in a position, check stop/target intrabar (gap-aware).
+        # 2) While in a position, check exits intrabar (gap-aware).
         if qty > 0:
             exit_price = None
             reason = ""
-            if o[t] <= stop:  # gapped down through the stop
-                exit_price, reason = o[t] * (1.0 - slip), "stop"
-            elif o[t] >= target:  # gapped up through the target
-                exit_price, reason = o[t] * (1.0 - slip), "target"
-            elif l[t] <= stop:  # stop checked before target (pessimistic)
-                exit_price, reason = stop * (1.0 - slip), "stop"
-            elif h[t] >= target:
-                exit_price, reason = target * (1.0 - slip), "target"
+            if exit_mode == "trailing":
+                # Ratchet a stop up under the high-water mark; no profit cap, so
+                # winners can run the length of the trend.
+                highest = max(highest, h[t])
+                eff_stop = max(stop, highest - trail_atr_mult * atr_entry)
+                if o[t] <= eff_stop:  # gapped through the trail
+                    exit_price, reason = o[t] * (1.0 - slip), "trail"
+                elif l[t] <= eff_stop:
+                    exit_price, reason = eff_stop * (1.0 - slip), "trail"
+            else:
+                if o[t] <= stop:  # gapped down through the stop
+                    exit_price, reason = o[t] * (1.0 - slip), "stop"
+                elif o[t] >= target:  # gapped up through the target
+                    exit_price, reason = o[t] * (1.0 - slip), "target"
+                elif l[t] <= stop:  # stop checked before target (pessimistic)
+                    exit_price, reason = stop * (1.0 - slip), "stop"
+                elif h[t] >= target:
+                    exit_price, reason = target * (1.0 - slip), "target"
             if exit_price is not None:
                 _close(trades, symbol, entry_index, entry_price, t, exit_price, qty, reason, commission_per_trade)
                 cash += qty * exit_price - commission_per_trade

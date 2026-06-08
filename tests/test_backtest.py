@@ -93,6 +93,23 @@ def test_buy_hold_return_matches_prices():
     assert abs(r.buy_hold_return - expected) < 1e-9
 
 
+def test_trailing_stop_holds_longer_and_removes_target_cap():
+    # Mechanics only: a trailing stop holds longer than a fixed target and never
+    # exits via "target". Whether it is MORE PROFITABLE is an empirical question
+    # for real data, not an invariant (giving back open profit on pullbacks can
+    # underperform locking in + re-entering) — see BACKTEST.md.
+    bars = syn.trending_series(300, drift=+0.005, seed=7)
+    target = run_backtest("UP", bars, exit_mode="target")
+    trailing = run_backtest("UP", bars, exit_mode="trailing")
+
+    def avg_hold(r):
+        return np.mean([t.bars_held for t in r.trades]) if r.trades else 0.0
+
+    assert avg_hold(trailing) > avg_hold(target)
+    assert all(t.exit_reason in ("trail", "signal", "eod") for t in trailing.trades)
+    assert not any(t.exit_reason == "target" for t in trailing.trades)
+
+
 def test_no_trades_leaves_equity_flat():
     # Too few bars to ever trade -> equity stays at start.
     close = np.linspace(100, 101, 40)
